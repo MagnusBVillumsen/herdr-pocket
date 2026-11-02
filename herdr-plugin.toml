@@ -1,0 +1,16 @@
+id = "herdr-pocket"
+name = "Pocket"
+version = "0.1.0"
+min_herdr_version = "0.9.5"
+description = "Follow and answer this machine's agents from your phone, through a herdr-pocket hub"
+platforms = ["linux", "macos"]
+
+[[build]]
+command = ["cargo", "build", "--release", "--locked"]
+
+# Connects this machine's agents to the hub in
+# ~/.config/herdr-pocket/config.toml. Only one node runs per machine; the
+# rest exit at once, as does a node with no hub configured. The node exits
+# when Herdr does.
+[[startup]]
+command = ["target/release/herdr-pocket", "node"]

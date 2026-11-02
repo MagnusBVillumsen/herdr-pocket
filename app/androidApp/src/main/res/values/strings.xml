@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">herdr-pocket</string>
+    <string name="channel_needs_you">Needs you</string>
+    <string name="channel_needs_you_desc">An important chat is waiting for an answer</string>
+    <string name="channel_finished">Finished</string>
+    <string name="channel_finished_desc">An important chat finished its work</string>
+</resources>

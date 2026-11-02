@@ -1,0 +1,86 @@
+package io.github.magnusbvillumsen.herdrpocket
+
+import io.github.magnusbvillumsen.herdrpocket.api.Agent
+import io.github.magnusbvillumsen.herdrpocket.api.AgentStatus
+import io.github.magnusbvillumsen.herdrpocket.api.Machine
+import io.github.magnusbvillumsen.herdrpocket.state.MachineGroup
+import io.github.magnusbvillumsen.herdrpocket.state.agentLocation
+import io.github.magnusbvillumsen.herdrpocket.state.backoffSeconds
+import io.github.magnusbvillumsen.herdrpocket.state.formatSince
+import io.github.magnusbvillumsen.herdrpocket.state.groupAgents
+import io.github.magnusbvillumsen.herdrpocket.state.shortenPath
+import io.github.magnusbvillumsen.herdrpocket.ui.screenLines
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class AgentListTest {
+    private fun agent(machine: String, pane: String, status: AgentStatus, since: Long = 0, important: Boolean = false) =
+        Agent(machine, pane, "claude", status, since, important = important)
+
+    @Test
+    fun blockedThenImportantThenNewest() {
+        val agents = listOf(
+            agent("thor", "a", AgentStatus.Working, since = 100),
+            agent("thor", "b", AgentStatus.Idle, since = 300, important = true),
+            agent("thor", "c", AgentStatus.Blocked, since = 50),
+            agent("thor", "d", AgentStatus.Done, since = 200),
+            agent("thor", "e", AgentStatus.Blocked, since = 10, important = true),
+            agent("thor", "f", AgentStatus.Working, since = 400),
+        )
+        val order = groupAgents(agents, listOf(Machine("thor"))).single().agents.map { it.pane }
+        assertEquals(listOf("e", "c", "b", "f", "d", "a"), order)
+    }
+
+    @Test
+    fun groupsConnectedFirstThenByName() {
+        val agents = listOf(
+            agent("zeus", "p1", AgentStatus.Idle),
+            agent("loki", "p1", AgentStatus.Working),
+            agent("thor", "p1", AgentStatus.Done),
+            agent("odin", "p1", AgentStatus.Idle),
+        )
+        val machines = listOf(Machine("thor", true), Machine("loki", false), Machine("zeus", true), Machine("freya", true))
+        val groups = groupAgents(agents, machines)
+        assertEquals(listOf("freya", "odin", "thor", "zeus", "loki"), groups.map { it.machine })
+        assertEquals(listOf(true, true, true, true, false), groups.map { it.connected })
+        assertEquals(emptyList<Agent>(), groups.first { it.machine == "freya" }.agents)
+        assertEquals(listOf("p1"), groups.first { it.machine == "loki" }.agents.map { it.pane })
+    }
+
+    @Test
+    fun nothingConnected() {
+        assertEquals(emptyList<MachineGroup>(), groupAgents(emptyList(), emptyList()))
+    }
+
+    @Test
+    fun since() {
+        assertEquals("", formatSince(1000, 0))
+        assertEquals("0s", formatSince(1000, 1005))
+        assertEquals("59s", formatSince(1000, 941))
+        assertEquals("1m", formatSince(1000, 940))
+        assertEquals("59m", formatSince(10_000, 10_000 - 3599))
+        assertEquals("2h", formatSince(10_000, 10_000 - 7200))
+        assertEquals("3d", formatSince(1_000_000, 1_000_000 - 3 * 86_400))
+    }
+
+    @Test
+    fun location() {
+        assertEquals("~/dev/game", shortenPath("/home/magnus/dev/game"))
+        assertEquals("~", shortenPath("/Users/magnus"))
+        assertEquals("/srv/x", shortenPath("/srv/x"))
+        assertEquals("game · ~/dev/game", agentLocation(Agent("m", "p", cwd = "/home/magnus/dev/game", workspace = "game")))
+        assertEquals("game", agentLocation(Agent("m", "p", workspace = "game")))
+        assertEquals("/srv/x", agentLocation(Agent("m", "p", cwd = "/srv/x")))
+    }
+
+    @Test
+    fun backoff() {
+        assertEquals(listOf(1, 2, 4, 8, 16, 30, 30, 30), (0..7).map { backoffSeconds(it) })
+        assertEquals(30, backoffSeconds(100))
+    }
+
+    @Test
+    fun screenTrimsTrailingBlankRows() {
+        assertEquals(listOf("a", "", "b"), screenLines("a  \n\nb\n\n   \n"))
+    }
+}

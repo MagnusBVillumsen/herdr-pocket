@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# A stand-in for `herdr` in tests/e2e.sh. It answers from files in
+# $FAKE_HERDR_DIR and logs prompt and send-keys calls there.
+set -euo pipefail
+dir=${FAKE_HERDR_DIR:?}
+[[ -e $dir/gone ]] && { echo "herdr is not running" >&2; exit 1; }
+
+not_found() {
+  printf '{"error":{"code":"pane_not_found","message":"pane %s not found"},"id":"cli:request"}\n' "$1"
+  exit 1
+}
+
+known() { grep -q "\"pane_id\":\"$1\"" "$dir/agents.json"; }
+
+case "$1 ${2:-}" in
+  "agent list") cat "$dir/agents.json" ;;
+  "workspace list") cat "$dir/workspaces.json" ;;
+  "pane read")
+    known "$3" || not_found "$3"
+    printf 'screen of %s\n%s\n' "$3" "${*:4}"
+    ;;
+  "agent prompt")
+    known "$3" || not_found "$3"
+    printf 'prompt %s %s\n' "$3" "$4" >>"$dir/calls.log"
+    ;;
+  "pane send-keys")
+    known "$3" || not_found "$3"
+    printf 'keys %s %s\n' "$3" "${*:4}" >>"$dir/calls.log"
+    ;;
+  *) echo "fake herdr: unexpected $*" >&2; exit 2 ;;
+esac
