@@ -109,6 +109,7 @@ file on the hub and on the nodes:
 ```toml
 hub = "http://heimdall:8790"   # where nodes connect, and the URL `pair` shows
 token = "…"                    # shared secret; `herdr-pocket token` makes one
+# token_file = "token"         # or read it from a file, relative to this one
 listen = "0.0.0.0:8790"        # hub only; default 127.0.0.1:8790
 machine = "thor"               # node only; default the short hostname
 ```
