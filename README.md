@@ -43,8 +43,9 @@ This builds the binary with cargo and starts a node whenever Herdr starts.
 The Nix package ships a ready plugin directory without a build step:
 `herdr plugin link $(nix build --print-out-paths github:MagnusBVillumsen/herdr-pocket)/share/herdr-pocket/plugin`.
 
-A node with no `hub` or `token` in its config does nothing, and only one node
-runs per machine however many Herdr servers start one.
+A node with no `hub` or `token` in its config waits for them, re-reading the
+config every 15 seconds, so a token added later needs no Herdr restart. Only
+one node runs per machine however many Herdr servers start one.
 
 ### The hub, on one always-on host
 

@@ -20,6 +20,8 @@ use crate::hub::unix_now;
 use crate::proto::{FromNode, ToNode};
 
 const POLL: Duration = Duration::from_secs(2);
+const CONFIG_WAIT: Duration = Duration::from_secs(15);
+const LOCK_WAIT: Duration = Duration::from_secs(3);
 /// Failed `herdr agent list` calls in a row before the node gives up.
 const HERDR_GONE: u32 = 3;
 const BACKOFF_MIN: Duration = Duration::from_secs(1);
@@ -190,18 +192,87 @@ async fn connect_loop(
     }
 }
 
-pub async fn run(config: &Config, path: &std::path::Path) -> Result<()> {
-    let (Some(hub), Some(token)) = (config.hub.as_deref(), config.token.as_deref()) else {
-        eprintln!(
-            "herdr-pocket: no hub or token in {}; the node stays off",
-            path.display()
-        );
+/// Waits for a config with both `hub` and `token`, re-reading it every
+/// [CONFIG_WAIT], so a token added after Herdr started needs no restart.
+/// Returns `None` once Herdr is gone.
+async fn wait_for_config(
+    mut config: Config,
+    path: &std::path::Path,
+) -> Option<(String, String, Config)> {
+    let mut dog = Watchdog::new(config.machine());
+    let mut told = false;
+    loop {
+        if let (Some(h), Some(t)) = (config.hub.clone(), config.token.clone()) {
+            return Some((h, t, config));
+        }
+        if !told {
+            eprintln!(
+                "herdr-pocket: no hub or token in {}; waiting for them",
+                path.display()
+            );
+            told = true;
+        }
+        tokio::time::sleep(CONFIG_WAIT).await;
+        if !dog.alive().await {
+            return None;
+        }
+        match config::load(path) {
+            Ok(c) => config = c,
+            Err(e) => eprintln!("{e:#}"),
+        }
+    }
+}
+
+/// Herdr is gone once it has failed [HERDR_GONE] checks in a row.
+struct Watchdog {
+    machine: String,
+    misses: u32,
+}
+
+impl Watchdog {
+    fn new(machine: String) -> Self {
+        Watchdog { machine, misses: 0 }
+    }
+
+    async fn alive(&mut self) -> bool {
+        if poll(&self.machine, &mut Tracker::default()).await.is_ok() {
+            self.misses = 0;
+        } else {
+            self.misses += 1;
+        }
+        self.misses < HERDR_GONE
+    }
+}
+
+/// Waits for the node lock instead of giving up, so a node that Herdr starts
+/// while an older one is still winding down takes over when that one exits.
+async fn wait_for_lock(machine: &str) -> Result<Option<File>> {
+    let mut dog = Watchdog::new(machine.to_owned());
+    let mut told = false;
+    loop {
+        if let Some(l) = lock()? {
+            return Ok(Some(l));
+        }
+        if !told {
+            eprintln!("herdr-pocket: another node runs here; waiting to take over");
+            told = true;
+        }
+        tokio::time::sleep(LOCK_WAIT).await;
+        if !dog.alive().await {
+            return Ok(None);
+        }
+    }
+}
+
+pub async fn run(config: Config, path: &std::path::Path) -> Result<()> {
+    let Some(_lock) = wait_for_lock(&config.machine()).await? else {
         return Ok(());
     };
-    let Some(_lock) = lock()? else {
+    let Some((hub, token, config)) = wait_for_config(config, path).await else {
         return Ok(());
     };
-    let url = ws_url(hub)?;
+    let token = token.as_str();
+    let url = ws_url(&hub)?;
     let machine = config.machine();
     let mut tracker = Tracker::default();
     let mut misses = 0;

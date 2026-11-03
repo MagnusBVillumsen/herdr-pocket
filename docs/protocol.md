@@ -101,7 +101,8 @@ The node polls `herdr agent list` every 2 s and sends `agents` only when
 something changed. It reconnects with backoff (1 s → 30 s) and exits once
 Herdr stops answering (3 failed polls in a row), like `herdr-sleep watch
 --hook`. Only one node runs per machine (a lock in `$XDG_RUNTIME_DIR`); a
-second one exits at once, as does a node with no `hub` or `token`. A node
+second one waits and takes over when the first exits, or stops with Herdr. A node with no `hub` or `token` waits, re-reading
+the config every 15 s, so adding the token later needs no Herdr restart. A node
 that disconnects stays in the hub's list with `connected: false` and its last
 agents for 60 s, then disappears.
 

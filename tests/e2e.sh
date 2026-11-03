@@ -109,8 +109,12 @@ ok "node connected"
 body=$(api GET /api/agents)
 expect "agent shape" "$body" '200 {"agents":[{"machine":"testbox","pane":"w1:p1","agent":"claude","status":"working","since":*,"title":"Fix the build","cwd":"/home/u/dev/game","workspace":"game","important":false},{"machine":"testbox","pane":"w1:p2","agent":"codex","status":"working","since":*,"title":"","cwd":"/home/u/dev/site","workspace":"site","important":false}],"machines":[{"name":"testbox","connected":true}]}'
 
-"$bin" node >"$t/node2.log" 2>&1 || fail "second node failed"
-ok "a second node exits at once"
+"$bin" node >"$t/node2.log" 2>&1 &
+node2_pid=$!
+pids+=($node2_pid)
+wait_for 5 grep -q "waiting to take over" "$t/node2.log" || fail "second node did not wait"
+kill -0 "$node2_pid" || fail "second node exited"
+ok "a second node waits for the lock"
 
 curl -sN -H "Authorization: Bearer $token" "$hub/api/events" >"$t/sse.log" &
 pids+=($!)
@@ -175,6 +179,7 @@ ok "pair prints the link"
 
 touch "$FAKE_HERDR_DIR/gone"
 wait_for 12 bash -c "! kill -0 $node_pid" || fail "node outlived herdr"
+wait_for 20 bash -c "! kill -0 $node2_pid" || fail "waiting node outlived herdr"
 ok "node exits once herdr is gone"
 wait_for 5 bash -c "curl -s -H 'Authorization: Bearer $token' $hub/api/agents | grep -q '\"connected\":false'" || fail "machine still connected"
 ok "machine shows disconnected"

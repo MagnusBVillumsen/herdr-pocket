@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Cmd::Hub => hub::run(&load()?, &path).await,
-        Cmd::Node => node::run(&load()?, &path).await,
+        Cmd::Node => node::run(load()?, &path).await,
         Cmd::Pair { url } => cli::pair(&load()?, &path, url),
         Cmd::Status => cli::status(&load()?, &path).await,
     }
