@@ -71,15 +71,18 @@ fun SettingsScreen(model: AppModel, snackbar: SnackbarHostState) {
         ) {
             Text("Hub", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Run `herdr-pocket pair` on the hub and scan the QR code with the camera, or enter the hub URL and token here.",
+                "Run `herdr-pocket pair` on the hub and scan its QR code, or enter the hub URL and token below.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            model.scanPairCode?.let { scan ->
+                Button(onClick = scan, modifier = Modifier.fillMaxWidth()) { Text("Scan QR code") }
+            }
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
                 label = { Text("Hub URL") },
-                placeholder = { Text("http://heimdall:8790") },
+                placeholder = { Text("https://heimdall.example.ts.net:8790") },
                 singleLine = true,
                 isError = url.isNotBlank() && candidate == null && token.isNotBlank(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),

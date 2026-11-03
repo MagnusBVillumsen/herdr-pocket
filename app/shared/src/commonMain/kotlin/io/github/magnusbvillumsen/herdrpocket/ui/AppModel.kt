@@ -23,6 +23,9 @@ class AppModel(
     private val _notices = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val notices: SharedFlow<String> = _notices.asSharedFlow()
 
+    /** Starts the platform's QR scanner, whose result goes to [handlePairLink]; null where there is none. */
+    var scanPairCode: (() -> Unit)? = null
+
     fun notice(message: String) {
         _notices.tryEmit(message)
     }

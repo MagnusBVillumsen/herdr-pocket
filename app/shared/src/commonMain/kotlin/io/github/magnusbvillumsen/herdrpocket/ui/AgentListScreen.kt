@@ -16,6 +16,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -97,6 +98,12 @@ fun AgentListScreen(model: AppModel, snackbar: SnackbarHostState) {
     ) { padding ->
         val groups = state.groups
         when {
+            !state.loaded && state.connection is Connection.Retrying -> Unreachable(
+                url = model.configs.config.value?.url.orEmpty(),
+                error = (state.connection as Connection.Retrying).message,
+                modifier = Modifier.fillMaxSize().padding(padding),
+                onSettings = { model.nav.open(Screen.Settings) },
+            )
             !state.loaded -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
@@ -118,6 +125,25 @@ fun AgentListScreen(model: AppModel, snackbar: SnackbarHostState) {
                 }
             }
         }
+    }
+}
+
+/** The usual cause on a tailnet is the phone's Tailscale being off, so say so. */
+@Composable
+private fun Unreachable(url: String, error: String, modifier: Modifier, onSettings: () -> Unit) {
+    Column(
+        modifier.padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("Can't reach the hub", style = MaterialTheme.typography.titleMedium)
+        Text(url, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        Text(
+            "Check that Tailscale is connected on this phone and that the URL is right. Retrying on its own.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        OutlinedButton(onClick = onSettings) { Text("Settings") }
     }
 }
 

@@ -10,6 +10,8 @@ coroutines = "1.11.0"
 activity-compose = "1.13.0"
 core-ktx = "1.19.1"
 unifiedpush = "3.3.5"
+code-scanner = "16.1.0"
+fragment = "1.8.9"
 # Keep compileSdk in sync with flake.nix; it also provides the build tools AGP defaults to (36.0.0).
 compileSdk = "37"
 targetSdk = "36"
@@ -31,6 +33,10 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
 unifiedpush-connector = { module = "org.unifiedpush.android:connector", version.ref = "unifiedpush" }
+# Google's scanner UI from Play services: no camera permission or camera code in the app.
+# The scanner pulls in a Fragment too old for the ActivityResult API.
+androidx-fragment = { module = "androidx.fragment:fragment-ktx", version.ref = "fragment" }
+play-services-code-scanner = { module = "com.google.android.gms:play-services-code-scanner", version.ref = "code-scanner" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

@@ -12,6 +12,9 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.lifecycleScope
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import io.github.magnusbvillumsen.herdrpocket.api.AgentKey
 import io.github.magnusbvillumsen.herdrpocket.ui.App
 import kotlinx.coroutines.launch
@@ -40,6 +43,7 @@ class MainActivity : ComponentActivity(), PushHost {
         super.onCreate(savedInstanceState)
         val model = herdr.model
         herdr.push.host = this
+        model.scanPairCode = ::scanPairCode
 
         val back = object : OnBackPressedCallback(model.nav.canGoBack) {
             override fun handleOnBackPressed() {
@@ -63,7 +67,19 @@ class MainActivity : ComponentActivity(), PushHost {
 
     override fun onDestroy() {
         if (herdr.push.host === this) herdr.push.host = null
+        herdr.model.scanPairCode = null
         super.onDestroy()
+    }
+
+    private fun scanPairCode() {
+        val model = herdr.model
+        val options = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
+        GmsBarcodeScanning.getClient(this, options).startScan()
+            .addOnSuccessListener { code ->
+                val raw = code.rawValue.orEmpty()
+                if (!model.handlePairLink(raw)) model.notice("That QR code is not a herdr-pocket pairing code")
+            }
+            .addOnFailureListener { model.notice("Could not start the QR scanner: ${it.message}") }
     }
 
     private fun handle(intent: Intent?) {

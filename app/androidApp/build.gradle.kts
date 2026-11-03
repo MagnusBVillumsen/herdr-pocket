@@ -33,4 +33,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.unifiedpush.connector)
+    implementation(libs.play.services.code.scanner)
+    implementation(libs.androidx.fragment)
 }
