@@ -9,6 +9,14 @@ interface ConfigStore {
     fun save(config: HubConfig)
 }
 
+enum class ThemeMode { System, Light, Dark }
+
+/** The app's light or dark choice, kept apart from the hub config. */
+interface ThemeStore {
+    val theme: StateFlow<ThemeMode>
+    fun saveTheme(mode: ThemeMode)
+}
+
 sealed interface PushState {
     data object Off : PushState
     data object Pending : PushState

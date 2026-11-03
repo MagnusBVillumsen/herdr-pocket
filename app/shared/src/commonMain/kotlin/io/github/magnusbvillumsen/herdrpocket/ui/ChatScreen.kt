@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,6 +73,14 @@ const val SCREEN_REFRESH_MS: Long = 2_000
 
 /** Screen text as lines, without the blank rows a terminal leaves below the cursor. */
 fun screenLines(text: String): List<String> = text.trimEnd().lines().map { it.trimEnd() }
+
+/**
+ * A full-width rule such as Claude Code's `────` around its prompt. Drawn as a
+ * divider, since at phone width the terminal-wide line wraps into several.
+ */
+fun isRule(line: String): Boolean = line.length >= 8 && line.all { it in RULE_CHARS }
+
+private const val RULE_CHARS = "─━═╌╍┄┅┈┉-_"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -180,12 +189,16 @@ fun ChatScreen(model: AppModel, key: AgentKey, snackbar: SnackbarHostState) {
                         reverseLayout = true,
                     ) {
                         itemsIndexed(shown.asReversed()) { _, line ->
-                            Text(
-                                line.ifEmpty { " " },
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                            )
+                            if (isRule(line)) {
+                                HorizontalDivider(Modifier.padding(vertical = 7.dp))
+                            } else {
+                                Text(
+                                    line.ifEmpty { " " },
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 12.sp,
+                                    lineHeight = 15.sp,
+                                )
+                            }
                         }
                     }
                 }

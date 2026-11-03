@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import io.github.magnusbvillumsen.herdrpocket.api.HubClient
 import io.github.magnusbvillumsen.herdrpocket.api.hubConfigOf
 import io.github.magnusbvillumsen.herdrpocket.platform.PushState
+import io.github.magnusbvillumsen.herdrpocket.platform.ThemeMode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -47,6 +49,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(model: AppModel, snackbar: SnackbarHostState) {
     val saved by model.configs.config.collectAsState()
     val pushState by model.push.state.collectAsState()
+    val theme by model.themes.theme.collectAsState()
     val scope = rememberCoroutineScope()
     var url by remember(saved) { mutableStateOf(saved?.url ?: "") }
     var token by remember(saved) { mutableStateOf(saved?.token ?: "") }
@@ -159,8 +162,27 @@ fun SettingsScreen(model: AppModel, snackbar: SnackbarHostState) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            Spacer(Modifier.padding(4.dp))
+            HorizontalDivider()
+            Text("Theme", style = MaterialTheme.typography.titleMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (mode in ThemeMode.entries) {
+                    FilterChip(
+                        selected = theme == mode,
+                        onClick = { model.themes.saveTheme(mode) },
+                        label = { Text(themeLabel(mode)) },
+                    )
+                }
+            }
         }
     }
+}
+
+private fun themeLabel(m: ThemeMode): String = when (m) {
+    ThemeMode.System -> "System"
+    ThemeMode.Light -> "Light"
+    ThemeMode.Dark -> "Dark"
 }
 
 fun pushText(s: PushState): String = when (s) {

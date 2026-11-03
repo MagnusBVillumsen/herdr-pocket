@@ -2,10 +2,12 @@ package io.github.magnusbvillumsen.herdrpocket
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
@@ -16,6 +18,7 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import io.github.magnusbvillumsen.herdrpocket.api.AgentKey
+import io.github.magnusbvillumsen.herdrpocket.platform.ThemeMode
 import io.github.magnusbvillumsen.herdrpocket.ui.App
 import kotlinx.coroutines.launch
 
@@ -39,9 +42,10 @@ class MainActivity : ComponentActivity(), PushHost {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val model = herdr.model
+        // System bar icons follow the app's theme, which may differ from the system's.
+        lifecycleScope.launch { model.themes.theme.collect { enableEdgeToEdge(barStyle(it), barStyle(it)) } }
         herdr.push.host = this
         model.scanPairCode = ::scanPairCode
 
@@ -58,6 +62,12 @@ class MainActivity : ComponentActivity(), PushHost {
         // A recreated activity has already handled the intent that started it.
         if (savedInstanceState == null) handle(intent)
         setContent { App(model) }
+    }
+
+    private fun barStyle(mode: ThemeMode): SystemBarStyle = when (mode) {
+        ThemeMode.System -> SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
+        ThemeMode.Light -> SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+        ThemeMode.Dark -> SystemBarStyle.dark(Color.TRANSPARENT)
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -21,7 +21,7 @@ class HerdrPocketApp : Application() {
         Notifier.createChannels(this)
         configs = AndroidConfigStore(this)
         push = PushController(this, configs, scope)
-        model = AppModel(configs, push)
+        model = AppModel(configs, push, configs)
         push.attach(model)
     }
 }

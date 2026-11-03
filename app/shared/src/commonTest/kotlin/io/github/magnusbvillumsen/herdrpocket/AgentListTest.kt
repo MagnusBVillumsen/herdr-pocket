@@ -9,9 +9,12 @@ import io.github.magnusbvillumsen.herdrpocket.state.backoffSeconds
 import io.github.magnusbvillumsen.herdrpocket.state.formatSince
 import io.github.magnusbvillumsen.herdrpocket.state.groupAgents
 import io.github.magnusbvillumsen.herdrpocket.state.shortenPath
+import io.github.magnusbvillumsen.herdrpocket.ui.isRule
 import io.github.magnusbvillumsen.herdrpocket.ui.screenLines
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class AgentListTest {
     private fun agent(machine: String, pane: String, status: AgentStatus, since: Long = 0, important: Boolean = false) =
@@ -82,5 +85,12 @@ class AgentListTest {
     @Test
     fun screenTrimsTrailingBlankRows() {
         assertEquals(listOf("a", "", "b"), screenLines("a  \n\nb\n\n   \n"))
+    }
+
+    @Test
+    fun rulesAreFullWidthLinesOnly() {
+        assertTrue(isRule("─".repeat(80)))
+        assertFalse(isRule("──"))
+        assertFalse(isRule("── done ──────────"))
     }
 }
