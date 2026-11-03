@@ -1,6 +1,7 @@
 package io.github.magnusbvillumsen.herdrpocket
 
 import io.github.magnusbvillumsen.herdrpocket.api.Agent
+import io.github.magnusbvillumsen.herdrpocket.api.AgentKey
 import io.github.magnusbvillumsen.herdrpocket.api.AgentStatus
 import io.github.magnusbvillumsen.herdrpocket.api.Machine
 import io.github.magnusbvillumsen.herdrpocket.state.MachineGroup
@@ -8,6 +9,7 @@ import io.github.magnusbvillumsen.herdrpocket.state.agentLocation
 import io.github.magnusbvillumsen.herdrpocket.state.backoffSeconds
 import io.github.magnusbvillumsen.herdrpocket.state.formatSince
 import io.github.magnusbvillumsen.herdrpocket.state.groupAgents
+import io.github.magnusbvillumsen.herdrpocket.state.sections
 import io.github.magnusbvillumsen.herdrpocket.state.shortenPath
 import io.github.magnusbvillumsen.herdrpocket.ui.isRule
 import io.github.magnusbvillumsen.herdrpocket.ui.screenLines
@@ -32,6 +34,20 @@ class AgentListTest {
         )
         val order = groupAgents(agents, listOf(Machine("thor"))).single().agents.map { it.pane }
         assertEquals(listOf("e", "c", "b", "f", "d", "a"), order)
+    }
+
+    @Test
+    fun starredOnTopAndHiddenApart() {
+        val agents = listOf(
+            agent("thor", "a", AgentStatus.Idle),
+            agent("odin", "b", AgentStatus.Working, important = true),
+            agent("thor", "c", AgentStatus.Done, important = true),
+            agent("odin", "d", AgentStatus.Idle),
+        )
+        val s = sections(agents, listOf(Machine("thor"), Machine("odin")), setOf(AgentKey("thor", "c"), AgentKey("odin", "d")))
+        assertEquals(listOf("b"), s.starred.map { it.pane })
+        assertEquals(listOf("odin" to emptyList(), "thor" to listOf("a")), s.groups.map { it.machine to it.agents.map { a -> a.pane } })
+        assertEquals(setOf("c", "d"), s.hidden.map { it.pane }.toSet())
     }
 
     @Test

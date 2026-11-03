@@ -1,5 +1,6 @@
 package io.github.magnusbvillumsen.herdrpocket.platform
 
+import io.github.magnusbvillumsen.herdrpocket.api.AgentKey
 import io.github.magnusbvillumsen.herdrpocket.api.HubConfig
 import kotlinx.coroutines.flow.StateFlow
 
@@ -15,6 +16,16 @@ enum class ThemeMode { System, Light, Dark }
 interface ThemeStore {
     val theme: StateFlow<ThemeMode>
     fun saveTheme(mode: ThemeMode)
+}
+
+/**
+ * Chats hidden from the list, on this phone only. Pane ids are reused once a
+ * pane closes, so [retain] drops keys the hub no longer lists.
+ */
+interface HiddenStore {
+    val hidden: StateFlow<Set<AgentKey>>
+    fun setHidden(key: AgentKey, hide: Boolean)
+    fun retain(keys: Set<AgentKey>)
 }
 
 sealed interface PushState {

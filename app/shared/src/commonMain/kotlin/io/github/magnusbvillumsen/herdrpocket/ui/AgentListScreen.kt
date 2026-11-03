@@ -1,6 +1,6 @@
 package io.github.magnusbvillumsen.herdrpocket.ui
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -21,12 +23,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -42,6 +46,7 @@ import io.github.magnusbvillumsen.herdrpocket.state.Connection
 import io.github.magnusbvillumsen.herdrpocket.state.MachineGroup
 import io.github.magnusbvillumsen.herdrpocket.state.agentLocation
 import io.github.magnusbvillumsen.herdrpocket.state.formatSince
+import io.github.magnusbvillumsen.herdrpocket.state.sections
 import io.github.magnusbvillumsen.herdrpocket.state.statusLabel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -53,7 +58,12 @@ fun nowSeconds(): Long = Clock.System.now().epochSeconds
 @Composable
 fun AgentListScreen(model: AppModel, snackbar: SnackbarHostState) {
     val state by model.store.state.collectAsState()
+    val hidden by model.hidden.hidden.collectAsState()
+    var showHidden by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    LaunchedEffect(state.loaded, state.agents) {
+        if (state.loaded) model.hidden.retain(state.agents.map { it.key }.toSet())
+    }
     var now by remember { mutableLongStateOf(nowSeconds()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -96,7 +106,19 @@ fun AgentListScreen(model: AppModel, snackbar: SnackbarHostState) {
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        val groups = state.groups
+        val s = sections(state.agents, state.machines, hidden)
+        val row: @Composable (Agent, Boolean, Boolean) -> Unit = { a, dimmed, withMachine ->
+            AgentRow(
+                agent = a,
+                now = now,
+                dimmed = dimmed,
+                withMachine = withMachine,
+                isHidden = a.key in hidden,
+                onOpen = { model.nav.open(Screen.Chat(a.key)) },
+                onStar = { toggle(a) },
+                onHide = { model.hidden.setHidden(a.key, a.key !in hidden) },
+            )
+        }
         when {
             !state.loaded && state.connection is Connection.Retrying -> Unreachable(
                 url = model.configs.config.value?.url.orEmpty(),
@@ -107,21 +129,37 @@ fun AgentListScreen(model: AppModel, snackbar: SnackbarHostState) {
             !state.loaded -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-            groups.isEmpty() -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            s.groups.isEmpty() && s.starred.isEmpty() && s.hidden.isEmpty() -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text("No machines have connected to the hub yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             else -> LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-                for (g in groups) {
-                    item(key = "machine:${g.machine}") { MachineHeader(g) }
-                    items(g.agents, key = { "agent:${it.machine}/${it.pane}" }) { a ->
-                        AgentRow(
-                            agent = a,
-                            now = now,
-                            dimmed = !g.connected,
-                            onOpen = { model.nav.open(Screen.Chat(a.key)) },
-                            onStar = { toggle(a) },
-                        )
+                if (s.starred.isNotEmpty()) {
+                    item(key = "starred") { SectionHeader("Starred") }
+                    items(s.starred, key = { "starred:${it.machine}/${it.pane}" }) { a ->
+                        row(a, !state.machineConnected(a.machine), true)
                     }
+                }
+                for (g in s.groups) {
+                    item(key = "machine:${g.machine}") { MachineHeader(g) }
+                    items(g.agents, key = { "agent:${it.machine}/${it.pane}" }) { a -> row(a, !g.connected, false) }
+                }
+                if (s.hidden.isNotEmpty()) {
+                    item(key = "hidden") {
+                        TextButton(onClick = { showHidden = !showHidden }, modifier = Modifier.padding(8.dp)) {
+                            Text(if (showHidden) "Hide ${s.hidden.size} hidden" else "Show ${s.hidden.size} hidden")
+                        }
+                    }
+                    if (showHidden) {
+                        items(s.hidden, key = { "hidden:${it.machine}/${it.pane}" }) { a -> row(a, true, true) }
+                    }
+                }
+                item(key = "hint") {
+                    Text(
+                        "Long-press a chat to hide it. ★ notifies you when it finishes or needs you.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(16.dp),
+                    )
                 }
             }
         }
@@ -155,6 +193,17 @@ private fun connectionText(c: Connection): String = when (c) {
 }
 
 @Composable
+private fun SectionHeader(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.titleSmall,
+        color = starColor,
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+    )
+    HorizontalDivider()
+}
+
+@Composable
 private fun MachineHeader(g: MachineGroup) {
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -176,12 +225,53 @@ private fun MachineHeader(g: MachineGroup) {
 }
 
 @Composable
-private fun AgentRow(agent: Agent, now: Long, dimmed: Boolean, onOpen: () -> Unit, onStar: () -> Unit) {
+private fun AgentRow(
+    agent: Agent,
+    now: Long,
+    dimmed: Boolean,
+    withMachine: Boolean,
+    isHidden: Boolean,
+    onOpen: () -> Unit,
+    onStar: () -> Unit,
+    onHide: () -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(
+                text = { Text(if (isHidden) "Unhide" else "Hide") },
+                onClick = {
+                    menu = false
+                    onHide()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(if (agent.important) "Unstar" else "Star") },
+                onClick = {
+                    menu = false
+                    onStar()
+                },
+            )
+        }
+        AgentRowContent(agent, now, dimmed, withMachine, onOpen, { menu = true }, onStar)
+    }
+}
+
+@Composable
+private fun AgentRowContent(
+    agent: Agent,
+    now: Long,
+    dimmed: Boolean,
+    withMachine: Boolean,
+    onOpen: () -> Unit,
+    onMenu: () -> Unit,
+    onStar: () -> Unit,
+) {
     Row(
         Modifier
             .fillMaxWidth()
             .alpha(if (dimmed) 0.45f else 1f)
-            .clickable(onClick = onOpen)
+            .combinedClickable(onClick = onOpen, onLongClick = onMenu)
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -205,7 +295,7 @@ private fun AgentRow(agent: Agent, now: Long, dimmed: Boolean, onOpen: () -> Uni
                 }
             }
             Text(
-                agentLocation(agent),
+                if (withMachine) "${agent.machine} · ${agentLocation(agent)}" else agentLocation(agent),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

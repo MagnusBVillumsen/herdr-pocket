@@ -5,6 +5,7 @@ import io.github.magnusbvillumsen.herdrpocket.api.HubClient
 import io.github.magnusbvillumsen.herdrpocket.api.HubConfig
 import io.github.magnusbvillumsen.herdrpocket.api.parsePairLink
 import io.github.magnusbvillumsen.herdrpocket.platform.ConfigStore
+import io.github.magnusbvillumsen.herdrpocket.platform.HiddenStore
 import io.github.magnusbvillumsen.herdrpocket.platform.PushRegistrar
 import io.github.magnusbvillumsen.herdrpocket.platform.ThemeStore
 import io.github.magnusbvillumsen.herdrpocket.state.HubStore
@@ -17,6 +18,7 @@ class AppModel(
     val configs: ConfigStore,
     val push: PushRegistrar,
     val themes: ThemeStore,
+    val hidden: HiddenStore,
     clientFor: (HubConfig) -> HubClient = { HubClient(it) },
 ) {
     val store: HubStore = HubStore(configs, clientFor)

@@ -1,6 +1,7 @@
 package io.github.magnusbvillumsen.herdrpocket.state
 
 import io.github.magnusbvillumsen.herdrpocket.api.Agent
+import io.github.magnusbvillumsen.herdrpocket.api.AgentKey
 import io.github.magnusbvillumsen.herdrpocket.api.AgentStatus
 import io.github.magnusbvillumsen.herdrpocket.api.Machine
 
@@ -31,6 +32,20 @@ fun groupAgents(agents: List<Agent>, machines: List<Machine>): List<MachineGroup
             )
         }
         .sortedWith(compareBy<MachineGroup>({ !it.connected }, { it.machine }))
+}
+
+/** The list as shown: starred chats first, the rest by machine, hidden ones apart. */
+data class AgentSections(val starred: List<Agent>, val groups: List<MachineGroup>, val hidden: List<Agent>)
+
+/** Hiding wins over starring, so a hidden chat can still notify without taking up the list. */
+fun sections(agents: List<Agent>, machines: List<Machine>, hidden: Set<AgentKey>): AgentSections {
+    val (out, shown) = agents.partition { it.key in hidden }
+    val (starred, rest) = shown.partition { it.important }
+    return AgentSections(
+        starred = starred.sortedWith(agentOrder),
+        groups = groupAgents(rest, machines),
+        hidden = out.sortedWith(agentOrder),
+    )
 }
 
 fun formatSince(nowSeconds: Long, since: Long): String {
