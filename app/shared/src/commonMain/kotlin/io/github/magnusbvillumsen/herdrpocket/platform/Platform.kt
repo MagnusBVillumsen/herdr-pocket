@@ -12,10 +12,14 @@ interface ConfigStore {
 
 enum class ThemeMode { System, Light, Dark }
 
-/** The app's light or dark choice, kept apart from the hub config. */
-interface ThemeStore {
+enum class GroupBy { Machine, Workspace }
+
+/** How the app looks, kept apart from the hub config. */
+interface ViewPrefs {
     val theme: StateFlow<ThemeMode>
+    val groupBy: StateFlow<GroupBy>
     fun saveTheme(mode: ThemeMode)
+    fun saveGroupBy(by: GroupBy)
 }
 
 /**

@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity(), PushHost {
         super.onCreate(savedInstanceState)
         val model = herdr.model
         // System bar icons follow the app's theme, which may differ from the system's.
-        lifecycleScope.launch { model.themes.theme.collect { enableEdgeToEdge(barStyle(it), barStyle(it)) } }
+        lifecycleScope.launch { model.prefs.theme.collect { enableEdgeToEdge(barStyle(it), barStyle(it)) } }
         herdr.push.host = this
         model.scanPairCode = ::scanPairCode
 

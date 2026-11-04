@@ -9,6 +9,7 @@ import io.github.magnusbvillumsen.herdrpocket.state.agentLocation
 import io.github.magnusbvillumsen.herdrpocket.state.backoffSeconds
 import io.github.magnusbvillumsen.herdrpocket.state.formatSince
 import io.github.magnusbvillumsen.herdrpocket.state.groupAgents
+import io.github.magnusbvillumsen.herdrpocket.state.groupWorkspaces
 import io.github.magnusbvillumsen.herdrpocket.state.sections
 import io.github.magnusbvillumsen.herdrpocket.state.shortenPath
 import io.github.magnusbvillumsen.herdrpocket.ui.isRule
@@ -48,6 +49,19 @@ class AgentListTest {
         assertEquals(listOf("b"), s.starred.map { it.pane })
         assertEquals(listOf("odin" to emptyList(), "thor" to listOf("a")), s.groups.map { it.machine to it.agents.map { a -> a.pane } })
         assertEquals(setOf("c", "d"), s.hidden.map { it.pane }.toSet())
+    }
+
+    @Test
+    fun workspacesSpanMachinesAndUnnamedComeLast() {
+        val agents = listOf(
+            agent("thor", "a", AgentStatus.Idle).copy(workspace = "mono"),
+            agent("odin", "b", AgentStatus.Idle).copy(workspace = "mono"),
+            agent("odin", "c", AgentStatus.Idle),
+            agent("thor", "d", AgentStatus.Idle).copy(workspace = "Game"),
+        )
+        val groups = groupWorkspaces(agents)
+        assertEquals(listOf("Game", "mono", ""), groups.map { it.name })
+        assertEquals(setOf("a", "b"), groups[1].agents.map { it.pane }.toSet())
     }
 
     @Test

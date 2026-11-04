@@ -6,14 +6,15 @@ import androidx.core.content.edit
 import io.github.magnusbvillumsen.herdrpocket.api.AgentKey
 import io.github.magnusbvillumsen.herdrpocket.api.HubConfig
 import io.github.magnusbvillumsen.herdrpocket.platform.ConfigStore
+import io.github.magnusbvillumsen.herdrpocket.platform.GroupBy
 import io.github.magnusbvillumsen.herdrpocket.platform.HiddenStore
 import io.github.magnusbvillumsen.herdrpocket.platform.ThemeMode
-import io.github.magnusbvillumsen.herdrpocket.platform.ThemeStore
+import io.github.magnusbvillumsen.herdrpocket.platform.ViewPrefs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class AndroidConfigStore(context: Context) : ConfigStore, ThemeStore, HiddenStore {
+class AndroidConfigStore(context: Context) : ConfigStore, ViewPrefs, HiddenStore {
     private val prefs: SharedPreferences = context.getSharedPreferences("hub", Context.MODE_PRIVATE)
     private val _config = MutableStateFlow(read())
     override val config: StateFlow<HubConfig?> = _config.asStateFlow()
@@ -21,6 +22,15 @@ class AndroidConfigStore(context: Context) : ConfigStore, ThemeStore, HiddenStor
         ThemeMode.entries.find { it.name == prefs.getString(KEY_THEME, null) } ?: ThemeMode.System,
     )
     override val theme: StateFlow<ThemeMode> = _theme.asStateFlow()
+    private val _groupBy = MutableStateFlow(
+        GroupBy.entries.find { it.name == prefs.getString(KEY_GROUP_BY, null) } ?: GroupBy.Machine,
+    )
+    override val groupBy: StateFlow<GroupBy> = _groupBy.asStateFlow()
+
+    override fun saveGroupBy(by: GroupBy) {
+        prefs.edit { putString(KEY_GROUP_BY, by.name) }
+        _groupBy.value = by
+    }
 
     private val _hidden = MutableStateFlow(
         prefs.getStringSet(KEY_HIDDEN, emptySet()).orEmpty().mapNotNull(::keyOf).toSet(),
@@ -68,5 +78,6 @@ class AndroidConfigStore(context: Context) : ConfigStore, ThemeStore, HiddenStor
         const val KEY_TOKEN = "token"
         const val KEY_THEME = "theme"
         const val KEY_HIDDEN = "hidden"
+        const val KEY_GROUP_BY = "group_by"
     }
 }

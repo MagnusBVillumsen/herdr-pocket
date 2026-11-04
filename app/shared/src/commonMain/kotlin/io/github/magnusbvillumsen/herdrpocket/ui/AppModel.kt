@@ -7,7 +7,7 @@ import io.github.magnusbvillumsen.herdrpocket.api.parsePairLink
 import io.github.magnusbvillumsen.herdrpocket.platform.ConfigStore
 import io.github.magnusbvillumsen.herdrpocket.platform.HiddenStore
 import io.github.magnusbvillumsen.herdrpocket.platform.PushRegistrar
-import io.github.magnusbvillumsen.herdrpocket.platform.ThemeStore
+import io.github.magnusbvillumsen.herdrpocket.platform.ViewPrefs
 import io.github.magnusbvillumsen.herdrpocket.state.HubStore
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 class AppModel(
     val configs: ConfigStore,
     val push: PushRegistrar,
-    val themes: ThemeStore,
+    val prefs: ViewPrefs,
     val hidden: HiddenStore,
     clientFor: (HubConfig) -> HubClient = { HubClient(it) },
 ) {

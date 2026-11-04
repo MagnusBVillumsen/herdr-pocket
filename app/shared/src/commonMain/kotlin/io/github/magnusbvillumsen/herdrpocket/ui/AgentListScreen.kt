@@ -16,6 +16,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,11 +38,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.magnusbvillumsen.herdrpocket.api.Agent
 import io.github.magnusbvillumsen.herdrpocket.api.AgentStatus
+import io.github.magnusbvillumsen.herdrpocket.platform.GroupBy
 import io.github.magnusbvillumsen.herdrpocket.state.Connection
 import io.github.magnusbvillumsen.herdrpocket.state.MachineGroup
 import io.github.magnusbvillumsen.herdrpocket.state.agentLocation
@@ -59,6 +62,7 @@ fun nowSeconds(): Long = Clock.System.now().epochSeconds
 fun AgentListScreen(model: AppModel, snackbar: SnackbarHostState) {
     val state by model.store.state.collectAsState()
     val hidden by model.hidden.hidden.collectAsState()
+    val groupBy by model.prefs.groupBy.collectAsState()
     var showHidden by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(state.loaded, state.agents) {
@@ -133,15 +137,40 @@ fun AgentListScreen(model: AppModel, snackbar: SnackbarHostState) {
                 Text("No machines have connected to the hub yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             else -> LazyColumn(Modifier.fillMaxSize().padding(padding)) {
+                item(key = "group-by") {
+                    Row(
+                        Modifier.padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        for (by in GroupBy.entries) {
+                            FilterChip(
+                                selected = groupBy == by,
+                                onClick = { model.prefs.saveGroupBy(by) },
+                                label = { Text(by.name) },
+                            )
+                        }
+                    }
+                }
                 if (s.starred.isNotEmpty()) {
-                    item(key = "starred") { SectionHeader("Starred") }
+                    item(key = "starred") { SectionHeader("Starred", starColor) }
                     items(s.starred, key = { "starred:${it.machine}/${it.pane}" }) { a ->
                         row(a, !state.machineConnected(a.machine), true)
                     }
                 }
-                for (g in s.groups) {
-                    item(key = "machine:${g.machine}") { MachineHeader(g) }
-                    items(g.agents, key = { "agent:${it.machine}/${it.pane}" }) { a -> row(a, !g.connected, false) }
+                if (groupBy == GroupBy.Machine) {
+                    for (g in s.groups) {
+                        item(key = "machine:${g.machine}") { MachineHeader(g) }
+                        items(g.agents, key = { "agent:${it.machine}/${it.pane}" }) { a -> row(a, !g.connected, false) }
+                    }
+                } else {
+                    for (w in s.workspaces) {
+                        item(key = "workspace:${w.name}") {
+                            SectionHeader(w.name.ifEmpty { "No workspace" }, MaterialTheme.colorScheme.primary)
+                        }
+                        items(w.agents, key = { "agent:${it.machine}/${it.pane}" }) { a ->
+                            row(a, !state.machineConnected(a.machine), true)
+                        }
+                    }
                 }
                 if (s.hidden.isNotEmpty()) {
                     item(key = "hidden") {
@@ -193,11 +222,11 @@ private fun connectionText(c: Connection): String = when (c) {
 }
 
 @Composable
-private fun SectionHeader(title: String) {
+private fun SectionHeader(title: String, color: Color) {
     Text(
         title,
         style = MaterialTheme.typography.titleSmall,
-        color = starColor,
+        color = color,
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
     )
     HorizontalDivider()

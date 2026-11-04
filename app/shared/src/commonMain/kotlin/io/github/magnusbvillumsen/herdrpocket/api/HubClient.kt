@@ -84,6 +84,10 @@ class HubClient(
         return send(HttpMethod.Get, u, ScreenResponse.serializer()).text
     }
 
+    /** The whole conversation from the agent's transcript; empty when there is none. */
+    suspend fun history(machine: String, pane: String): String =
+        send(HttpMethod.Get, endpoint("api", "agents", machine, pane, "history"), ScreenResponse.serializer()).text
+
     suspend fun prompt(machine: String, pane: String, text: String) {
         call(HttpMethod.Post, JsonObject.serializer(), "api", "agents", machine, pane, "prompt") {
             json(PromptRequest.serializer(), PromptRequest(text))

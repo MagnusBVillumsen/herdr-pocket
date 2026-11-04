@@ -12,7 +12,7 @@ import androidx.lifecycle.repeatOnLifecycle
 
 @Composable
 fun App(model: AppModel) {
-    val theme by model.themes.theme.collectAsState()
+    val theme by model.prefs.theme.collectAsState()
     HerdrTheme(theme) {
         val snackbar = remember { SnackbarHostState() }
         val lifecycle = LocalLifecycleOwner.current.lifecycle

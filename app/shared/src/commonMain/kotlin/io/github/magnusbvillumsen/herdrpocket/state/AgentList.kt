@@ -35,7 +35,20 @@ fun groupAgents(agents: List<Agent>, machines: List<Machine>): List<MachineGroup
 }
 
 /** The list as shown: starred chats first, the rest by machine, hidden ones apart. */
-data class AgentSections(val starred: List<Agent>, val groups: List<MachineGroup>, val hidden: List<Agent>)
+data class AgentSections(
+    val starred: List<Agent>,
+    val groups: List<MachineGroup>,
+    val workspaces: List<WorkspaceGroup>,
+    val hidden: List<Agent>,
+)
+
+data class WorkspaceGroup(val name: String, val agents: List<Agent>)
+
+/** By name, so one workspace on two machines is one group; agents with no workspace come last. */
+fun groupWorkspaces(agents: List<Agent>): List<WorkspaceGroup> = agents
+    .groupBy { it.workspace }
+    .map { (name, list) -> WorkspaceGroup(name, list.sortedWith(agentOrder)) }
+    .sortedWith(compareBy<WorkspaceGroup>({ it.name.isEmpty() }, { it.name.lowercase() }))
 
 /** Hiding wins over starring, so a hidden chat can still notify without taking up the list. */
 fun sections(agents: List<Agent>, machines: List<Machine>, hidden: Set<AgentKey>): AgentSections {
@@ -44,6 +57,7 @@ fun sections(agents: List<Agent>, machines: List<Machine>, hidden: Set<AgentKey>
     return AgentSections(
         starred = starred.sortedWith(agentOrder),
         groups = groupAgents(rest, machines),
+        workspaces = groupWorkspaces(rest),
         hidden = out.sortedWith(agentOrder),
     )
 }

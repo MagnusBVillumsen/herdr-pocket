@@ -28,6 +28,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,7 +69,7 @@ val quickKeys: List<Pair<String, String>> = listOf(
     "↓" to "down",
 )
 
-const val SCREEN_LINES: Int = 300
+const val SCREEN_LINES: Int = 1_000
 const val SCREEN_REFRESH_MS: Long = 2_000
 
 /** Screen text as lines, without the blank rows a terminal leaves below the cursor. */
@@ -82,6 +83,15 @@ fun isRule(line: String): Boolean = line.length >= 8 && line.all { it in RULE_CH
 
 private const val RULE_CHARS = "─━═╌╍┄┅┈┉-_"
 
+@Composable
+private fun ScreenLine(line: String) {
+    if (isRule(line)) {
+        HorizontalDivider(Modifier.padding(vertical = 7.dp))
+    } else {
+        Text(line.ifEmpty { " " }, fontFamily = FontFamily.Monospace, fontSize = 12.sp, lineHeight = 15.sp)
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(model: AppModel, key: AgentKey, snackbar: SnackbarHostState) {
@@ -93,6 +103,8 @@ fun ChatScreen(model: AppModel, key: AgentKey, snackbar: SnackbarHostState) {
     var error by remember(key) { mutableStateOf<String?>(null) }
     var input by remember(key) { mutableStateOf("") }
     var sending by remember(key) { mutableStateOf(false) }
+    var history by remember(key) { mutableStateOf<List<String>?>(null) }
+    var loadingHistory by remember(key) { mutableStateOf(false) }
     val refresh = remember(key) { Channel<Unit>(Channel.CONFLATED) }
 
     LaunchedEffect(key) {
@@ -108,6 +120,23 @@ fun ChatScreen(model: AppModel, key: AgentKey, snackbar: SnackbarHostState) {
                     error = e.message
                 }
                 withTimeoutOrNull(SCREEN_REFRESH_MS) { refresh.receive() }
+            }
+        }
+    }
+
+    fun loadHistory() {
+        val client = model.store.client() ?: return
+        scope.launch {
+            loadingHistory = true
+            try {
+                val text = client.history(key.machine, key.pane)
+                if (text.isBlank()) model.notice("No saved conversation for this chat") else history = screenLines(text)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                model.notice("Could not load the conversation: ${e.message}")
+            } finally {
+                loadingHistory = false
             }
         }
     }
@@ -188,16 +217,22 @@ fun ChatScreen(model: AppModel, key: AgentKey, snackbar: SnackbarHostState) {
                         Modifier.fillMaxSize().padding(horizontal = 8.dp),
                         reverseLayout = true,
                     ) {
-                        itemsIndexed(shown.asReversed()) { _, line ->
-                            if (isRule(line)) {
-                                HorizontalDivider(Modifier.padding(vertical = 7.dp))
-                            } else {
-                                Text(
-                                    line.ifEmpty { " " },
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                )
+                        itemsIndexed(shown.asReversed()) { _, line -> ScreenLine(line) }
+                        history?.let { past ->
+                            item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+                            itemsIndexed(past.asReversed()) { _, line -> ScreenLine(line) }
+                        }
+                        if (agent?.agent == "claude") {
+                            item {
+                                TextButton(onClick = ::loadHistory, enabled = !loadingHistory) {
+                                    Text(
+                                        when {
+                                            loadingHistory -> "Loading…"
+                                            history == null -> "Load full conversation"
+                                            else -> "Reload conversation"
+                                        },
+                                    )
+                                }
                             }
                         }
                     }

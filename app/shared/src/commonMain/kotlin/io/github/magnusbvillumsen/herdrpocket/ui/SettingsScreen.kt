@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(model: AppModel, snackbar: SnackbarHostState) {
     val saved by model.configs.config.collectAsState()
     val pushState by model.push.state.collectAsState()
-    val theme by model.themes.theme.collectAsState()
+    val theme by model.prefs.theme.collectAsState()
     val scope = rememberCoroutineScope()
     var url by remember(saved) { mutableStateOf(saved?.url ?: "") }
     var token by remember(saved) { mutableStateOf(saved?.token ?: "") }
@@ -170,7 +170,7 @@ fun SettingsScreen(model: AppModel, snackbar: SnackbarHostState) {
                 for (mode in ThemeMode.entries) {
                     FilterChip(
                         selected = theme == mode,
-                        onClick = { model.themes.saveTheme(mode) },
+                        onClick = { model.prefs.saveTheme(mode) },
                         label = { Text(themeLabel(mode)) },
                     )
                 }
