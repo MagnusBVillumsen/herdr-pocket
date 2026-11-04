@@ -16,6 +16,7 @@ use tokio_tungstenite::tungstenite::http::HeaderValue;
 use crate::agent::{self, Agent, Tracker};
 use crate::config::{self, Config};
 use crate::herdr;
+use crate::history;
 use crate::hub::unix_now;
 use crate::proto::{FromNode, ToNode};
 
@@ -75,6 +76,14 @@ async fn poll(machine: &str, tracker: &mut Tracker) -> Result<Vec<Agent>> {
     Ok(agents)
 }
 
+/// Empty for an agent with no transcript we can read.
+async fn history(pane: &str, lines: u32) -> Result<String> {
+    let Some(session) = history::claude_session(&herdr::agents().await?, pane) else {
+        return Ok(String::new());
+    };
+    tokio::task::spawn_blocking(move || history::read(&session, lines as usize)).await?
+}
+
 async fn execute(m: ToNode) -> FromNode {
     match m {
         ToNode::Read { id, pane, lines } => FromNode::reply(
@@ -82,6 +91,10 @@ async fn execute(m: ToNode) -> FromNode {
             herdr::read(&pane, lines)
                 .await
                 .map(|t| json!({ "text": t })),
+        ),
+        ToNode::History { id, pane, lines } => FromNode::reply(
+            id,
+            history(&pane, lines).await.map(|t| json!({ "text": t })),
         ),
         ToNode::Prompt { id, pane, text } => {
             FromNode::reply(id, herdr::prompt(&pane, &text).await.map(|_| json!({})))

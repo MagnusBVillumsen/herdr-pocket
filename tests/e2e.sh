@@ -128,6 +128,7 @@ expect "prompt that looks like an option" "$(api POST /api/agents/testbox/w1:p1/
 expect "keys" "$(api POST /api/agents/testbox/w1:p2/keys '{"keys":["Enter","C-c"]}')" '200 {}'
 expect "herdr saw them" "$(cat "$FAKE_HERDR_DIR/calls.log")" $'prompt w1:p1 fix the tests\nprompt w1:p1  -v please\nkeys w1:p2 Enter C-c'
 expect "unknown pane" "$(api POST /api/agents/testbox/w9:p9/keys '{"keys":["Enter"]}')" '404 {"error":"no agent in w9:p9 on testbox"}'
+expect "no history for codex" "$(api GET /api/agents/testbox/w1:p2/history)" '200 {"text":""}'
 expect "unknown machine" "$(api GET /api/agents/odin/w1:p1/screen)" '404 {"error":"no machine odin"}'
 expect "empty prompt" "$(api POST /api/agents/testbox/w1:p1/prompt '{"text":" "}')" '400 {"error":"text is empty"}'
 expect "bad json" "$(api POST /api/agents/testbox/w1:p1/keys '{"keys":')" '400 {"error":*}'

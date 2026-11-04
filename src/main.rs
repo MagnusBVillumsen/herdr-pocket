@@ -2,6 +2,7 @@ mod agent;
 mod cli;
 mod config;
 mod herdr;
+mod history;
 mod hub;
 mod node;
 mod notify;

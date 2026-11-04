@@ -472,6 +472,24 @@ async fn screen(
     ))
 }
 
+async fn history(
+    State(hub): State<Arc<Hub>>,
+    Path((machine, pane)): Path<(String, String)>,
+    Query(q): Query<Lines>,
+) -> std::result::Result<Json<Value>, ApiError> {
+    let lines = q.lines.unwrap_or(MAX_LINES).clamp(1, MAX_LINES);
+    let v = hub
+        .ask(&machine, &pane, |id| ToNode::History {
+            id,
+            pane: pane.clone(),
+            lines,
+        })
+        .await?;
+    Ok(Json(
+        json!({ "text": v["text"].as_str().unwrap_or_default() }),
+    ))
+}
+
 #[derive(Deserialize)]
 struct PromptBody {
     text: String,
@@ -596,6 +614,7 @@ pub fn router(hub: Arc<Hub>) -> Router {
         .route("/api/agents", get(agents))
         .route("/api/events", get(events))
         .route("/api/agents/{machine}/{pane}/screen", get(screen))
+        .route("/api/agents/{machine}/{pane}/history", get(history))
         .route("/api/agents/{machine}/{pane}/prompt", post(prompt))
         .route("/api/agents/{machine}/{pane}/keys", post(keys))
         .route("/api/agents/{machine}/{pane}/important", put(important))

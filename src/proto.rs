@@ -48,6 +48,11 @@ pub enum ToNode {
         pane: String,
         lines: u32,
     },
+    History {
+        id: u64,
+        pane: String,
+        lines: u32,
+    },
     Prompt {
         id: u64,
         pane: String,

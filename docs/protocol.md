@@ -86,6 +86,9 @@ Hub → node (each answered by one `reply` with the same `id`):
 ```
 
 - `read` → `herdr pane read <pane> --source recent-unwrapped --lines N`
+- `history` → the session id from `herdr agent list`, then the conversation from
+  `~/.claude/projects/*/<session>.jsonl`, since Claude Code's alternate screen
+  leaves little in the pane
 - `prompt` → `herdr agent prompt <pane> <text>`. Herdr's CLI takes any
   argument that starts with `-` for an option and has no `--`, so the node
   sends such a text with a leading space.
@@ -117,6 +120,7 @@ URL-encoded path segments.
 | GET | `/api/agents` | | `{"agents": [Agent…], "machines": [{"name": "thor", "connected": true}]}` |
 | GET | `/api/events` | | Server-sent events: `event: agents` with the same body as `/api/agents`, on connect and on every change; a `: ping` comment every 20 s |
 | GET | `/api/agents/{machine}/{pane}/screen?lines=200` | | `{"text": "…"}` |
+| GET | `/api/agents/{machine}/{pane}/history?lines=10000` | | `{"text": "…"}`, empty for agents other than Claude Code |
 | POST | `/api/agents/{machine}/{pane}/prompt` | `{"text": "…"}` | `{}` |
 | POST | `/api/agents/{machine}/{pane}/keys` | `{"keys": ["Enter"]}` | `{}` |
 | PUT | `/api/agents/{machine}/{pane}/important` | `{"important": true}` | `{}` |
